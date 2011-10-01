@@ -1593,6 +1593,16 @@ static VALUE convert_encoding(VALUE source)
     return source;
 }
 
+#if defined MAGLEV
+// Maglev doesn't support the mark function, keep a reference in the object
+#define QUOTE(x) #x
+#define PARSER_SET_REFERENCE(json, field, val)                          \
+    (json)->field = (val);                                              \
+    rb_iv_set(json->dwrapped_parser, QUOTE(@field), (json)->field);
+#else
+#define PARSER_SET_REFERENCE(json, field, val) (json)->field = (val);
+#endif
+
 /*
  * call-seq: new(source, opts => {})
  *
@@ -1627,7 +1637,7 @@ static VALUE cParser_initialize(int argc, VALUE *argv, VALUE self)
     VALUE source, opts;
     GET_PARSER_INIT;
 
-    if (json->Vsource) {
+    if (RTEST(json->Vsource)) {
         rb_raise(rb_eTypeError, "already initialized instance");
     }
     rb_scan_args(argc, argv, "11", &source, &opts);
@@ -1675,35 +1685,35 @@ static VALUE cParser_initialize(int argc, VALUE *argv, VALUE self)
             }
             tmp = ID2SYM(i_create_id);
             if (option_given_p(opts, tmp)) {
-                json->create_id = rb_hash_aref(opts, tmp);
+                PARSER_SET_REFERENCE(json, create_id, rb_hash_aref(opts, tmp));
             } else {
-                json->create_id = rb_funcall(mJSON, i_create_id, 0);
+                PARSER_SET_REFERENCE(json, create_id, rb_funcall(mJSON, i_create_id, 0));
             }
             tmp = ID2SYM(i_object_class);
             if (option_given_p(opts, tmp)) {
-                json->object_class = rb_hash_aref(opts, tmp);
+                PARSER_SET_REFERENCE(json, object_class, rb_hash_aref(opts, tmp));
             } else {
-                json->object_class = Qnil;
+                PARSER_SET_REFERENCE(json, object_class, Qnil);
             }
             tmp = ID2SYM(i_array_class);
             if (option_given_p(opts, tmp)) {
-                json->array_class = rb_hash_aref(opts, tmp);
+                PARSER_SET_REFERENCE(json, array_class, rb_hash_aref(opts, tmp));
             } else {
-                json->array_class = Qnil;
+                PARSER_SET_REFERENCE(json, array_class, Qnil);
             }
             tmp = ID2SYM(i_match_string);
             if (option_given_p(opts, tmp)) {
                 VALUE match_string = rb_hash_aref(opts, tmp);
-                json->match_string = RTEST(match_string) ? match_string : Qnil;
+                PARSER_SET_REFERENCE(json, match_string, RTEST(match_string) ? match_string : Qnil);
             } else {
-                json->match_string = Qnil;
+                PARSER_SET_REFERENCE(json, match_string, Qnil);
             }
         }
     } else {
         json->max_nesting = 19;
         json->allow_nan = 0;
         json->create_additions = 1;
-        json->create_id = rb_funcall(mJSON, i_create_id, 0);
+        PARSER_SET_REFERENCE(json, create_id, rb_funcall(mJSON, i_create_id, 0));
         json->object_class = Qnil;
         json->array_class = Qnil;
     }
@@ -1713,12 +1723,12 @@ static VALUE cParser_initialize(int argc, VALUE *argv, VALUE self)
     json->current_nesting = 0;
     json->len = RSTRING_LEN(source);
     json->source = RSTRING_PTR(source);;
-    json->Vsource = source;
+    PARSER_SET_REFERENCE(json, Vsource, source);
     return self;
 }
 
 
-#line 1719 "parser.c"
+#line 1729 "parser.c"
 static const int JSON_start = 1;
 static const int JSON_first_final = 10;
 static const int JSON_error = 0;
@@ -1726,7 +1736,7 @@ static const int JSON_error = 0;
 static const int JSON_en_main = 1;
 
 
-#line 726 "parser.rl"
+#line 736 "parser.rl"
 
 
 static VALUE cParser_parse_strict(VALUE self)
@@ -1737,16 +1747,16 @@ static VALUE cParser_parse_strict(VALUE self)
     GET_PARSER;
 
 
-#line 1738 "parser.c"
+#line 1748 "parser.c"
 	{
 	cs = JSON_start;
 	}
 
-#line 736 "parser.rl"
+#line 746 "parser.rl"
     p = json->source;
     pe = p + json->len;
 
-#line 1747 "parser.c"
+#line 1757 "parser.c"
 	{
 	if ( p == pe )
 		goto _test_eof;
@@ -1802,7 +1812,7 @@ case 5:
 		goto st1;
 	goto st5;
 tr3:
-#line 715 "parser.rl"
+#line 725 "parser.rl"
 	{
         char *np;
         json->current_nesting = 1;
@@ -1811,7 +1821,7 @@ tr3:
     }
 	goto st10;
 tr4:
-#line 708 "parser.rl"
+#line 718 "parser.rl"
 	{
         char *np;
         json->current_nesting = 1;
@@ -1823,7 +1833,7 @@ st10:
 	if ( ++p == pe )
 		goto _test_eof10;
 case 10:
-#line 1824 "parser.c"
+#line 1834 "parser.c"
 	switch( (*p) ) {
 		case 13: goto st10;
 		case 32: goto st10;
@@ -1880,7 +1890,7 @@ case 9:
 	_out: {}
 	}
 
-#line 739 "parser.rl"
+#line 749 "parser.rl"
 
     if (cs >= JSON_first_final && p == pe) {
         return result;
@@ -1892,7 +1902,7 @@ case 9:
 
 
 
-#line 1893 "parser.c"
+#line 1903 "parser.c"
 static const int JSON_quirks_mode_start = 1;
 static const int JSON_quirks_mode_first_final = 10;
 static const int JSON_quirks_mode_error = 0;
@@ -1900,7 +1910,7 @@ static const int JSON_quirks_mode_error = 0;
 static const int JSON_quirks_mode_en_main = 1;
 
 
-#line 764 "parser.rl"
+#line 774 "parser.rl"
 
 
 static VALUE cParser_parse_quirks_mode(VALUE self)
@@ -1911,16 +1921,16 @@ static VALUE cParser_parse_quirks_mode(VALUE self)
     GET_PARSER;
 
 
-#line 1912 "parser.c"
+#line 1922 "parser.c"
 	{
 	cs = JSON_quirks_mode_start;
 	}
 
-#line 774 "parser.rl"
+#line 784 "parser.rl"
     p = json->source;
     pe = p + json->len;
 
-#line 1921 "parser.c"
+#line 1931 "parser.c"
 	{
 	if ( p == pe )
 		goto _test_eof;
@@ -1954,7 +1964,7 @@ st0:
 cs = 0;
 	goto _out;
 tr2:
-#line 756 "parser.rl"
+#line 766 "parser.rl"
 	{
         char *np = JSON_parse_value(json, p, pe, &result);
         if (np == NULL) { p--; {p++; cs = 10; goto _out;} } else {p = (( np))-1;}
@@ -1964,7 +1974,7 @@ st10:
 	if ( ++p == pe )
 		goto _test_eof10;
 case 10:
-#line 1965 "parser.c"
+#line 1975 "parser.c"
 	switch( (*p) ) {
 		case 13: goto st10;
 		case 32: goto st10;
@@ -2053,7 +2063,7 @@ case 9:
 	_out: {}
 	}
 
-#line 777 "parser.rl"
+#line 787 "parser.rl"
 
     if (cs >= JSON_quirks_mode_first_final && p == pe) {
         return result;
@@ -2085,6 +2095,13 @@ static JSON_Parser *JSON_allocate()
 {
     JSON_Parser *json = ALLOC(JSON_Parser);
     MEMZERO(json, JSON_Parser, 1);
+    json->dwrapped_parser = Qnil;
+    json->Vsource = Qnil;
+    json->create_id = Qnil;
+    json->object_class = Qnil;
+    json->array_class = Qnil;
+    json->match_string = Qnil;
+
     return json;
 }
 
@@ -2105,7 +2122,7 @@ static void JSON_free(JSON_Parser *json)
 static VALUE cJSON_parser_s_allocate(VALUE klass)
 {
     JSON_Parser *json = JSON_allocate();
-    return Data_Wrap_Struct(klass, JSON_mark, JSON_free, json);
+    return json->dwrapped_parser = Data_Wrap_Struct(klass, JSON_mark, JSON_free, json);
 }
 
 /*
