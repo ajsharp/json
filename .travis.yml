@@ -11,5 +11,6 @@ rvm:
   - ree
   - jruby
   - ruby-head
+  - maglev
 
 script: "bundle exec rake"
